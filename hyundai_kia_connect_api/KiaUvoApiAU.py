@@ -91,12 +91,12 @@ class KiaUvoApiAU(ApiImplType1):
     ) -> Token:
         stamp = self._get_stamp()
         device_id = self._get_device_id(stamp)
-        cookies = self._get_cookies()
+        cookies, cookies_referer = self._get_cookies()
         # self._set_session_language(cookies)
         authorization_code = None
         try:
             authorization_code = self._get_authorization_code_with_redirect_url(
-                username, password, cookies
+                username, password, cookies, referer=cookies_referer
             )
         except Exception as ex:
             _LOGGER.error(f"{DOMAIN} - get_authorization_code_with_redirect_url failed: {ex}")
@@ -858,18 +858,21 @@ class KiaUvoApiAU(ApiImplType1):
         _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES url={url}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies request: {url}")
         session = requests.Session()
-        _ = session.get(url)
-        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES cookie_keys={list(session.cookies.keys())} account_cookie={session.cookies.get('account')}")
+        response = session.get(url)
+        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES final_url={response.url} cookie_keys={list(session.cookies.keys())}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies response: {session.cookies.get_dict()}")
-        return session.cookies.get_dict()
+        return session.cookies.get_dict(), response.url
 
     def _get_authorization_code_with_redirect_url(
-        self, username, password, cookies
+        self, username, password, cookies, referer=None
     ) -> str:
         url = self.USER_API_URL + "signin"
         headers = {"Content-type": "application/json"}
+        if referer:
+            headers["Origin"] = "https://" + self.BASE_URL
+            headers["Referer"] = referer
         data = {"email": username, "password": password}
-        _LOGGER.error(f"{DOMAIN} - [3/4] SIGNIN url={url} cookies={list(cookies.keys())}")
+        _LOGGER.error(f"{DOMAIN} - [3/4] SIGNIN url={url} referer={referer}")
         raw = requests.post(url, json=data, headers=headers, cookies=cookies)
         _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
         response = raw.json()
