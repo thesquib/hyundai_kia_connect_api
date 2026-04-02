@@ -833,6 +833,7 @@ class KiaUvoApiAU(ApiImplType1):
             "User-Agent": USER_AGENT_OK_HTTP,
         }
 
+        _LOGGER.error(f"{DOMAIN} - [1/4] GET DEVICE ID url={url}")
         _LOGGER.debug(f"{DOMAIN} - Get Device ID request: {headers} {payload}")
         response = requests.post(url, headers=headers, json=payload)
         response = response.json()
@@ -854,9 +855,11 @@ class KiaUvoApiAU(ApiImplType1):
             + "/api/v1/user/oauth2/redirect&lang=en"
         )
 
+        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES url={url}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies request: {url}")
         session = requests.Session()
         _ = session.get(url)
+        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES cookie_keys={list(session.cookies.keys())}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies response: {session.cookies.get_dict()}")
         return session.cookies.get_dict()
 
@@ -866,7 +869,7 @@ class KiaUvoApiAU(ApiImplType1):
         url = self.USER_API_URL + "signin"
         headers = {"Content-type": "application/json"}
         data = {"email": username, "password": password}
-        _LOGGER.error(f"{DOMAIN} - signin request url={url} cookies={list(cookies.keys())}")
+        _LOGGER.error(f"{DOMAIN} - [3/4] SIGNIN url={url} cookies={list(cookies.keys())}")
         raw = requests.post(url, json=data, headers=headers, cookies=cookies)
         _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
         response = raw.json()
@@ -893,6 +896,7 @@ class KiaUvoApiAU(ApiImplType1):
             + "%2Fapi%2Fv1%2Fuser%2Foauth2%2Fredirect&code="
             + authorization_code
         )
+        _LOGGER.error(f"{DOMAIN} - [4/4] GET ACCESS TOKEN url={url}")
         response = requests.post(url, data=data, headers=headers)
         response = response.json()
 
