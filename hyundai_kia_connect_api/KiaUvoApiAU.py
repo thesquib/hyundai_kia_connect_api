@@ -98,8 +98,8 @@ class KiaUvoApiAU(ApiImplType1):
             authorization_code = self._get_authorization_code_with_redirect_url(
                 username, password, cookies
             )
-        except Exception:
-            _LOGGER.debug(f"{DOMAIN} - get_authorization_code_with_redirect_url failed")
+        except Exception as ex:
+            _LOGGER.error(f"{DOMAIN} - get_authorization_code_with_redirect_url failed: {ex}")
 
         if authorization_code is None:
             raise AuthenticationError("Login Failed")
@@ -866,9 +866,9 @@ class KiaUvoApiAU(ApiImplType1):
         url = self.USER_API_URL + "signin"
         headers = {"Content-type": "application/json"}
         data = {"email": username, "password": password}
-        response = requests.post(
-            url, json=data, headers=headers, cookies=cookies
-        ).json()
+        raw = requests.post(url, json=data, headers=headers, cookies=cookies)
+        _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
+        response = raw.json()
         parsed_url = urlparse(response["redirectUrl"])
         authorization_code = "".join(parse_qs(parsed_url.query)["code"])
         return authorization_code
