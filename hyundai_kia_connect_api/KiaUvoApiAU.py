@@ -77,6 +77,7 @@ class KiaUvoApiAU(ApiImplType1):
                 "SGGCDRvrzmRa2WTNFQPUaC1OsnAhQgPgcQETEfbY8abEjR/ICXK0p+Rayw5tHCGyiUA="
             )
 
+        self._region = REGIONS[region]
         self.USER_API_URL: str = "https://" + self.BASE_URL + "/api/v1/user/"
         self.SPA_API_URL: str = "https://" + self.BASE_URL + "/api/v1/spa/"
         self.SPA_API_URL_V2: str = "https://" + self.BASE_URL + "/api/v2/spa/"
@@ -138,20 +139,43 @@ class KiaUvoApiAU(ApiImplType1):
         password: str,
         pin: str | None = None,
     ) -> Token:
-        """Exchange a browser-obtained auth code for tokens (NZ browser-auth workaround)."""
+        """Exchange a browser-obtained auth code for tokens (NZ browser-auth workaround).
+
+        Stores the raw OAuth refresh token so refresh_access_token() can renew
+        without requiring browser re-authentication.
+        """
         stamp = self._get_stamp()
         device_id = self._get_device_id(stamp)
-        _, access_token, refresh_code = self._get_access_token(auth_code, stamp)
-        _, refresh_token = self._get_refresh_token(refresh_code, stamp)
+        _, access_token, raw_refresh_token = self._get_access_token(auth_code, stamp)
+        # Store the raw OAuth refresh token directly (no secondary exchange).
+        # refresh_access_token() will use it with grant_type=refresh_token.
         valid_until = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=23)
         return Token(
             username=username,
             password=password,
             access_token=access_token,
-            refresh_token=refresh_token,
+            refresh_token=raw_refresh_token,
             device_id=device_id,
             valid_until=valid_until,
             pin=pin,
+        )
+
+    def refresh_access_token(self, token: Token) -> Token:
+        """Refresh the access token. For NZ, use the stored OAuth refresh token
+        instead of re-running the full login (which is TLS fingerprinted)."""
+        if self._region != REGION_NZ:
+            return super().refresh_access_token(token)
+        stamp = self._get_stamp()
+        _, new_access_token = self._get_refresh_token(token.refresh_token, stamp)
+        valid_until = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=23)
+        return Token(
+            username=token.username,
+            password=token.password,
+            access_token=new_access_token,
+            refresh_token=token.refresh_token,
+            device_id=token.device_id,
+            valid_until=valid_until,
+            pin=token.pin,
         )
 
     def update_vehicle_with_cached_state(self, token: Token, vehicle: Vehicle) -> None:
