@@ -120,6 +120,40 @@ class KiaUvoApiAU(ApiImplType1):
             pin=pin,
         )
 
+    def get_authorize_url(self) -> str:
+        """Return the OAuth authorize URL for the user to open in a browser."""
+        return (
+            self.USER_API_URL
+            + "oauth2/authorize?response_type=code&client_id="
+            + self.CLIENT_ID
+            + "&redirect_uri=https://"
+            + self.BASE_URL
+            + "/api/v1/user/oauth2/redirect&lang=en"
+        )
+
+    def login_with_auth_code(
+        self,
+        auth_code: str,
+        username: str,
+        password: str,
+        pin: str | None = None,
+    ) -> Token:
+        """Exchange a browser-obtained auth code for tokens (NZ browser-auth workaround)."""
+        stamp = self._get_stamp()
+        device_id = self._get_device_id(stamp)
+        _, access_token, refresh_code = self._get_access_token(auth_code, stamp)
+        _, refresh_token = self._get_refresh_token(refresh_code, stamp)
+        valid_until = dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=23)
+        return Token(
+            username=username,
+            password=password,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            device_id=device_id,
+            valid_until=valid_until,
+            pin=pin,
+        )
+
     def update_vehicle_with_cached_state(self, token: Token, vehicle: Vehicle) -> None:
         url = self.SPA_API_URL + "vehicles/" + vehicle.id
         is_ccs2 = vehicle.ccu_ccs2_protocol_support != 0
