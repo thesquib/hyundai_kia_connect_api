@@ -838,7 +838,7 @@ class KiaUvoApiAU(ApiImplType1):
         response = requests.post(url, headers=headers, json=payload)
         response = response.json()
         _check_response_for_errors(response)
-        _LOGGER.debug(f"{DOMAIN} - Get Device ID response: {response}")
+        _LOGGER.error(f"{DOMAIN} - [1/4] GET DEVICE ID response retCode={response.get('retCode')} resCode={response.get('resCode')}")
 
         device_id = response["resMsg"]["deviceId"]
         return device_id
@@ -859,7 +859,7 @@ class KiaUvoApiAU(ApiImplType1):
         _LOGGER.debug(f"{DOMAIN} - Get cookies request: {url}")
         session = requests.Session()
         _ = session.get(url)
-        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES cookie_keys={list(session.cookies.keys())}")
+        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES cookie_keys={list(session.cookies.keys())} account_cookie={session.cookies.get('account')}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies response: {session.cookies.get_dict()}")
         return session.cookies.get_dict()
 
