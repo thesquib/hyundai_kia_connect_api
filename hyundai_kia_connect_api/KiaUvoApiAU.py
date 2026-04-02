@@ -871,7 +871,7 @@ class KiaUvoApiAU(ApiImplType1):
         if referer:
             headers["Origin"] = "https://" + self.BASE_URL
             headers["Referer"] = referer
-        data = {"email": username, "password": password}
+        data = {"email": username, "password": password, "mobileNum": ""}
         _LOGGER.error(f"{DOMAIN} - [3/4] SIGNIN url={url} referer={referer}")
         raw = requests.post(url, json=data, headers=headers, cookies=cookies)
         _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
