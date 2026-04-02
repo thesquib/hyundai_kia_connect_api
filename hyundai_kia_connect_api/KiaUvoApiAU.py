@@ -90,6 +90,11 @@ class KiaUvoApiAU(ApiImplType1):
         otp_handler: ty.Callable[[dict], dict] | None = None,
         pin: str | None = None,
     ) -> Token:
+        if self._region == REGION_NZ:
+            raise AuthenticationError(
+                "New Zealand requires browser-based authentication. "
+                "Use get_authorize_url() and login_with_auth_code() instead."
+            )
         stamp = self._get_stamp()
         device_id = self._get_device_id(stamp)
         cookies, cookies_referer = self._get_cookies()
@@ -100,7 +105,7 @@ class KiaUvoApiAU(ApiImplType1):
                 username, password, cookies, referer=cookies_referer
             )
         except Exception as ex:
-            _LOGGER.error(f"{DOMAIN} - get_authorization_code_with_redirect_url failed: {ex}")
+            _LOGGER.debug(f"{DOMAIN} - get_authorization_code_with_redirect_url failed: {ex}")
 
         if authorization_code is None:
             raise AuthenticationError("Login Failed")
@@ -891,12 +896,10 @@ class KiaUvoApiAU(ApiImplType1):
             "User-Agent": USER_AGENT_OK_HTTP,
         }
 
-        _LOGGER.error(f"{DOMAIN} - [1/4] GET DEVICE ID url={url}")
         _LOGGER.debug(f"{DOMAIN} - Get Device ID request: {headers} {payload}")
         response = requests.post(url, headers=headers, json=payload)
         response = response.json()
         _check_response_for_errors(response)
-        _LOGGER.error(f"{DOMAIN} - [1/4] GET DEVICE ID response retCode={response.get('retCode')} resCode={response.get('resCode')}")
 
         device_id = response["resMsg"]["deviceId"]
         return device_id
@@ -913,11 +916,9 @@ class KiaUvoApiAU(ApiImplType1):
             + "/api/v1/user/oauth2/redirect&lang=en"
         )
 
-        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES url={url}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies request: {url}")
         session = requests.Session()
         response = session.get(url)
-        _LOGGER.error(f"{DOMAIN} - [2/4] GET COOKIES final_url={response.url} cookie_keys={list(session.cookies.keys())}")
         _LOGGER.debug(f"{DOMAIN} - Get cookies response: {session.cookies.get_dict()}")
         return session.cookies.get_dict(), response.url
 
@@ -930,9 +931,8 @@ class KiaUvoApiAU(ApiImplType1):
             headers["Origin"] = "https://" + self.BASE_URL
             headers["Referer"] = referer
         data = {"email": username, "password": password, "mobileNum": ""}
-        _LOGGER.error(f"{DOMAIN} - [3/4] SIGNIN url={url} referer={referer}")
+        _LOGGER.debug(f"{DOMAIN} - Signin url={url}")
         raw = requests.post(url, json=data, headers=headers, cookies=cookies)
-        _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
         response = raw.json()
         parsed_url = urlparse(response["redirectUrl"])
         authorization_code = "".join(parse_qs(parsed_url.query)["code"])
@@ -957,7 +957,7 @@ class KiaUvoApiAU(ApiImplType1):
             + "%2Fapi%2Fv1%2Fuser%2Foauth2%2Fredirect&code="
             + authorization_code
         )
-        _LOGGER.error(f"{DOMAIN} - [4/4] GET ACCESS TOKEN url={url}")
+        _LOGGER.debug(f"{DOMAIN} - Get access token url={url}")
         response = requests.post(url, data=data, headers=headers)
         response = response.json()
 
