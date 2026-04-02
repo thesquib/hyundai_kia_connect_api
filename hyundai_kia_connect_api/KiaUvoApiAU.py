@@ -866,6 +866,7 @@ class KiaUvoApiAU(ApiImplType1):
         url = self.USER_API_URL + "signin"
         headers = {"Content-type": "application/json"}
         data = {"email": username, "password": password}
+        _LOGGER.error(f"{DOMAIN} - signin request url={url} cookies={list(cookies.keys())}")
         raw = requests.post(url, json=data, headers=headers, cookies=cookies)
         _LOGGER.error(f"{DOMAIN} - signin response status={raw.status_code} body={raw.text}")
         response = raw.json()
